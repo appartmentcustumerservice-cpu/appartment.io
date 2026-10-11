@@ -1,0 +1,861 @@
+<title>Armadio Digitale</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=Figtree:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: una colonna da telefono, griglia di capi come cartellini appesi, barra di navigazione in basso. */
+:root {
+  --bg: #eef0ec; --surface: #ffffff; --sunk: #e3e6e0; --ink: #1d2320; --muted: #5d665f;
+  --line: #d3d8d0; --accent: #1f5c57; --accent-ink: #ffffff; --accent-soft: #d6e7e3;
+  --ok: #2f7a3d; --warn: #9a6a00; --bad: #b3261e; --tag-ai: #dfe8f7; --tag-label: #e2f0e1;
+  --tag-you: #f6ead2; --tag-px: #ece3f5;
+  --f-display: "Bricolage Grotesque", "Avenir Next", system-ui, sans-serif;
+  --f-body: "Figtree", system-ui, -apple-system, sans-serif;
+  --f-mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
+  --r: 14px; --bar-h: 64px;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #121614; --surface: #1b201e; --sunk: #232a27; --ink: #e8ece9; --muted: #9aa59e;
+  --line: #2e3733; --accent: #7cc2b8; --accent-ink: #0e1a18; --accent-soft: #1f3632;
+  --ok: #7ccf8a; --warn: #e3b54f; --bad: #f08a80; --tag-ai: #233148; --tag-label: #233a26;
+  --tag-you: #3f3320; --tag-px: #33273f; color-scheme: dark;
+} }
+:root[data-theme="dark"] {
+  --bg: #121614; --surface: #1b201e; --sunk: #232a27; --ink: #e8ece9; --muted: #9aa59e;
+  --line: #2e3733; --accent: #7cc2b8; --accent-ink: #0e1a18; --accent-soft: #1f3632;
+  --ok: #7ccf8a; --warn: #e3b54f; --bad: #f08a80; --tag-ai: #233148; --tag-label: #233a26;
+  --tag-you: #3f3320; --tag-px: #33273f; color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body { background: var(--bg); color: var(--ink); font: 15px/1.45 var(--f-body); }
+main { padding-inline: 16px; padding-block: 12px calc(var(--bar-h) + 24px); max-width: 760px; margin: 0 auto; }
+h1, h2, h3 { font-family: var(--f-display); font-weight: 700; margin: 0; text-wrap: balance; letter-spacing: -0.01em; }
+h1 { font-size: 26px; } h2 { font-size: 19px; } h3 { font-size: 16px; }
+button, input, select, textarea { font: inherit; color: inherit; }
+button { cursor: pointer; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.muted { color: var(--muted); }
+.mono { font-family: var(--f-mono); font-size: 12px; letter-spacing: 0.02em; }
+.row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.stack { display: grid; gap: 12px; }
+.btn { border: 1px solid var(--line); background: var(--surface); border-radius: 999px; padding: 10px 16px; font-weight: 600; }
+.btn.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+.btn.ghost { background: transparent; }
+.btn.danger { color: var(--bad); border-color: var(--bad); background: transparent; }
+.btn:disabled { opacity: .5; cursor: default; }
+.banner { background: var(--sunk); border-radius: var(--r); padding: 10px 14px; font-size: 14px; }
+.banner.warn { border-left: 4px solid var(--warn); }
+
+/* Testata */
+.top { display: flex; justify-content: space-between; align-items: end; gap: 12px; padding-block: 8px 12px; }
+.top .count { font-family: var(--f-mono); font-size: 12px; color: var(--muted); }
+
+/* Filtri */
+.chips { display: flex; gap: 6px; overflow-x: auto; padding-bottom: 4px; scrollbar-width: none; }
+.chip { flex: none; border: 1px solid var(--line); background: var(--surface); border-radius: 999px; padding: 6px 12px; font-size: 13px; font-weight: 500; }
+.chip[aria-pressed="true"] { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+
+/* Griglia dei capi: ogni carta è un cartellino con il foro in alto */
+.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 12px; margin-top: 12px; }
+.card { position: relative; background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); padding: 10px; text-align: left; display: grid; gap: 8px; min-width: 0; }
+.card::before { content: ""; position: absolute; top: 8px; right: 10px; width: 9px; height: 9px; border-radius: 50%; border: 1.5px solid var(--line); background: var(--bg); }
+.card .ph { aspect-ratio: 1; border-radius: 10px; background: var(--sunk); display: grid; place-items: center; overflow: hidden; }
+.card .ph img { width: 100%; height: 100%; object-fit: contain; }
+.card .name { font-weight: 600; font-size: 14px; line-height: 1.25; overflow: hidden; text-overflow: ellipsis; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+.sw { display: inline-block; width: 14px; height: 14px; border-radius: 4px; border: 1px solid var(--line); vertical-align: -2px; flex: none; }
+.ph .glyph { font-family: var(--f-display); font-size: 40px; color: var(--muted); }
+
+.empty { text-align: center; padding: 40px 16px; display: grid; gap: 12px; justify-items: center; }
+
+/* Barra in basso */
+nav.bar { position: fixed; left: 0; right: 0; bottom: 0; background: var(--surface); border-top: 1px solid var(--line); display: grid; grid-template-columns: repeat(4, 1fr); padding-bottom: env(safe-area-inset-bottom, 0px); z-index: 5; }
+nav.bar button { border: 0; background: none; padding: 10px 4px; display: grid; justify-items: center; gap: 2px; font-size: 12px; color: var(--muted); height: var(--bar-h); }
+nav.bar button[aria-current="page"] { color: var(--accent); font-weight: 600; }
+nav.bar svg { width: 22px; height: 22px; }
+nav.bar .add span.plus { width: 40px; height: 40px; border-radius: 50%; background: var(--accent); color: var(--accent-ink); display: grid; place-items: center; font-size: 26px; line-height: 1; margin-top: -6px; }
+
+/* Foglio modale */
+.sheet-wrap { position: fixed; inset: 0; background: rgba(10,14,12,.45); display: grid; align-items: end; z-index: 10; }
+.sheet { background: var(--bg); border-radius: 18px 18px 0 0; max-height: 92%; overflow-y: auto; padding-inline: 16px; padding-block: 14px calc(20px + env(safe-area-inset-bottom, 0px)); width: 100%; max-width: 760px; margin: 0 auto; }
+.sheet header { display: flex; justify-content: space-between; align-items: center; gap: 8px; position: sticky; top: -14px; background: var(--bg); padding-block: 4px 10px; z-index: 1; }
+.choice { display: grid; grid-template-columns: 44px 1fr; gap: 12px; align-items: center; background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); padding: 12px; text-align: left; width: 100%; }
+.choice .ic { width: 44px; height: 44px; border-radius: 12px; background: var(--accent-soft); color: var(--accent); display: grid; place-items: center; }
+.choice small { display: block; color: var(--muted); font-size: 13px; }
+
+/* Editor */
+.preview { display: flex; gap: 10px; overflow-x: auto; }
+.preview figure { margin: 0; flex: none; width: 140px; }
+.preview .frame { width: 140px; height: 140px; border-radius: 12px; overflow: hidden; display: grid; place-items: center; background: repeating-conic-gradient(var(--sunk) 0 25%, var(--surface) 0 50%) 0 / 16px 16px; border: 1px solid var(--line); }
+.preview .frame img { max-width: 100%; max-height: 100%; }
+.preview figcaption { font-size: 12px; color: var(--muted); margin-top: 4px; }
+.field { display: grid; gap: 6px; }
+.field > label, .field > .lab { font-size: 13px; font-weight: 600; display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+.field input[type=text], .field input[type=number], .field select, .field textarea { width: 100%; border: 1px solid var(--line); background: var(--surface); border-radius: 10px; padding: 10px 12px; }
+.field textarea { min-height: 60px; resize: vertical; }
+.seg { display: flex; flex-wrap: wrap; gap: 6px; }
+.seg button { border: 1px solid var(--line); background: var(--surface); border-radius: 10px; padding: 7px 11px; font-size: 13px; }
+.seg button[aria-pressed="true"] { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+.palette { display: grid; grid-template-columns: repeat(auto-fill, minmax(36px, 1fr)); gap: 6px; }
+.palette button { aspect-ratio: 1; border-radius: 10px; border: 2px solid transparent; outline: 1px solid var(--line); }
+.palette button[aria-pressed="true"] { border-color: var(--ink); outline: 2px solid var(--surface); }
+.palette .none { background: var(--surface); font-size: 11px; color: var(--muted); }
+.src { font-family: var(--f-mono); font-size: 10.5px; font-weight: 500; padding: 1px 7px; border-radius: 999px; letter-spacing: .03em; }
+.src.ai { background: var(--tag-ai); } .src.etichetta { background: var(--tag-label); } .src.tu { background: var(--tag-you); } .src.pixel { background: var(--tag-px); }
+.hint { font-size: 12.5px; color: var(--muted); }
+.status { display: flex; gap: 10px; align-items: center; background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); padding: 10px 12px; font-size: 14px; }
+.spin { width: 16px; height: 16px; border-radius: 50%; border: 2px solid var(--line); border-top-color: var(--accent); animation: sp 0.9s linear infinite; flex: none; }
+@keyframes sp { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .spin { animation-duration: 3s; } }
+.actions { display: flex; gap: 8px; justify-content: flex-end; flex-wrap: wrap; position: sticky; bottom: calc(-20px - env(safe-area-inset-bottom, 0px)); background: var(--bg); padding-block: 10px; }
+.err { color: var(--bad); font-size: 14px; }
+
+/* Outfit */
+.outfit { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); padding: 12px; display: grid; gap: 10px; }
+.outfit .items { display: grid; grid-template-columns: repeat(auto-fill, minmax(72px, 1fr)); gap: 8px; }
+.outfit .it { display: grid; gap: 4px; font-size: 12px; min-width: 0; }
+.outfit .it .ph { aspect-ratio: 1; background: var(--sunk); border-radius: 8px; overflow: hidden; display: grid; place-items: center; }
+.outfit .it .ph img { width: 100%; height: 100%; object-fit: contain; }
+.outfit .why { font-size: 13px; color: var(--muted); }
+.score { font-family: var(--f-mono); font-size: 12px; }
+.opinion { white-space: pre-wrap; background: var(--accent-soft); border-radius: var(--r); padding: 12px; font-size: 14px; }
+
+/* Qualità */
+table.q { width: 100%; border-collapse: collapse; font-size: 14px; }
+table.q th, table.q td { text-align: left; padding: 8px 6px; border-bottom: 1px solid var(--line); vertical-align: top; }
+table.q td.n { font-variant-numeric: tabular-nums; text-align: right; white-space: nowrap; }
+.pill { font-family: var(--f-mono); font-size: 11px; padding: 2px 8px; border-radius: 999px; white-space: nowrap; }
+.pill.ok { background: color-mix(in srgb, var(--ok) 18%, transparent); color: var(--ok); }
+.pill.bad { background: color-mix(in srgb, var(--bad) 18%, transparent); color: var(--bad); }
+.pill.na { background: var(--sunk); color: var(--muted); }
+.tablewrap { overflow-x: auto; background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); padding: 4px 10px; }
+.kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px; }
+.kpi { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); padding: 12px; }
+.kpi b { font-family: var(--f-display); font-size: 24px; display: block; font-variant-numeric: tabular-nums; }
+</style>
+
+<main id="app" aria-live="polite"></main>
+<nav class="bar" id="bar" aria-label="Sezioni">
+  <button data-view="armadio" aria-current="page"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 4a2 2 0 1 1 2 2c-1 0-2 .6-2 1.6V8l8.4 6.3c.9.7.4 2.2-.8 2.2H4.4c-1.2 0-1.7-1.5-.8-2.2L12 8"/></svg>Armadio</button>
+  <button data-view="aggiungi" class="add" aria-label="Aggiungi un capo"><span class="plus">+</span></button>
+  <button data-view="outfit"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M8 3l-4 3 2 4 2-1v12h8V9l2 1 2-4-4-3c-.5 1.5-2 2.5-4 2.5S8.5 4.5 8 3z"/></svg>Abbinamenti</button>
+  <button data-view="qualita"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg>Qualità AI</button>
+</nav>
+<div id="modal"></div>
+
+<script>
+"use strict";
+// ---------- Vocabolari (stesso schema dati del kit Fase 0) ----------
+const CATEGORIE = ["t-shirt/top","camicia","maglieria","felpa","pantaloni","jeans","gonna","shorts","abito","tuta/jumpsuit","giacca","cappotto/giubbotto","scarpe","borsa","accessorio","altro"];
+const MACRO = {"t-shirt/top":"sopra","camicia":"sopra","maglieria":"sopra","felpa":"sopra","pantaloni":"sotto","jeans":"sotto","gonna":"sotto","shorts":"sotto","abito":"intero","tuta/jumpsuit":"intero","giacca":"capospalla","cappotto/giubbotto":"capospalla","scarpe":"scarpe","borsa":"accessori","accessorio":"accessori","altro":"altro"};
+const MACRO_LABEL = {tutti:"Tutti",sopra:"Sopra",sotto:"Sotto",intero:"Abiti",capospalla:"Capispalla",scarpe:"Scarpe",accessori:"Accessori",altro:"Altro"};
+const COLORI = {"nero":"#1a1a1a","bianco":"#f5f5f5","panna":"#efe6d2","grigio chiaro":"#b8b8b8","grigio scuro":"#555555","beige":"#d6c3a0","cammello":"#b5895a","marrone":"#6b4423","blu navy":"#1f2a44","blu":"#2f5bb7","azzurro":"#8fbbe0","verde oliva":"#6b6b2f","verde":"#2e7d4f","verde salvia":"#9cae8f","rosso":"#c0282d","bordeaux":"#6d1a2a","rosa":"#e8a3b5","arancione":"#e07b2a","giallo":"#e8c547","viola":"#6a3d8f","oro":"#c9a443","argento":"#c0c0c8"};
+const NEUTRI = new Set(["nero","bianco","panna","grigio chiaro","grigio scuro","beige","cammello","marrone","blu navy"]);
+const FANTASIE = ["tinta unita","righe","quadri","pois","floreale","animalier","geometrica","camouflage","stampa/grafica","altro"];
+const MATERIALI = ["cotone","lino","lana","cachemire","seta","viscosa","poliestere","nylon","acrilico","denim","pelle","ecopelle","piuma","velluto","misto","non determinabile"];
+const FIBRA_A_MATERIALE = {cotone:"cotone",lino:"lino",lana:"lana",cachemire:"cachemire",alpaca:"lana",mohair:"lana",seta:"seta",viscosa:"viscosa",modal:"viscosa",lyocell:"viscosa",poliestere:"poliestere",poliammide:"nylon",acrilico:"acrilico",pelle:"pelle",piuma:"piuma"};
+const FIBRE = ["cotone","lino","lana","cachemire","alpaca","mohair","seta","viscosa","modal","lyocell","poliestere","poliammide","elastan","acrilico","pelle","piuma","altro"];
+const CALORE_FIBRA = {lino:0,seta:1,viscosa:1,modal:1,lyocell:1,cotone:1.5,poliestere:1.5,poliammide:1.5,acrilico:2,pelle:2.5,lana:3,cachemire:3,alpaca:3,mohair:3,piuma:3};
+const STAGIONI = ["primavera","estate","autunno","inverno"];
+const CALORE = ["leggero","medio","pesante"];
+const FORMALITA = {1:"Sport/casa",2:"Casual",3:"Smart casual",4:"Elegante",5:"Cerimonia"};
+const LAVAGGIO = ["lavatrice","a mano","solo a secco","non lavare"];
+// Campi valutati per la Fase 0: soglia = quota minima di proposte accettate senza correzione.
+const SOGLIE = {"categoria|ai":.90,"colore_primario|ai":.85,"stagioni|ai":.80,"fantasia|ai":.85,"formalita|ai":.75,"materiale|ai":null,"composizione_testo|etichetta":.90,"lavaggio|etichetta":.85,"brand|etichetta":null,"taglia|etichetta":null,"materiale|etichetta":null,"colore_primario|pixel":.80};
+const BLOCCANTI = new Set(["categoria|ai","colore_primario|ai","stagioni|ai","composizione_testo|etichetta"]);
+const CAMPIONE_MIN = 15;
+
+// ---------- Stato ----------
+const S = { view: "armadio", filtro: "tutti", stagione: "tutte", capi: [], db: null, uid: null, sample: null, images: false,
+            caricato: false, dbErrore: null, outfitStagione: stagioneCorrente(), outfitFormalita: 2, outfit: null, parere: null };
+const $ = (s, r = document) => r.querySelector(s);
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+
+function stagioneCorrente(d = new Date()) {
+  const m = d.getMonth();
+  return m >= 2 && m <= 4 ? "primavera" : m >= 5 && m <= 7 ? "estate" : m >= 8 && m <= 10 ? "autunno" : "inverno";
+}
+
+// ---------- Avvio e capability ----------
+async function avvia() {
+  render();
+  const use = n => (window.claude && window.claude.use ? window.claude.use(n) : Promise.resolve(null));
+  const [user, db, sample] = await Promise.all([use("user"), use("db"), use("sample")]);
+  S.sample = sample;
+  if (sample) {
+    try { const lim = await sample.limits(); S.images = !!lim.images; } catch { S.images = false; }
+  }
+  if (user && db) {
+    S.uid = await user.id().catch(() => null);
+    if (S.uid) {
+      S.db = db;
+      db.collection("data/users/" + S.uid).onSnapshot(snap => {
+        S.capi = snap.docs.map(d => ({ id: d.id, ...d.data() })).filter(c => c.tipo === "capo")
+          .sort((a, b) => (b.creato || 0) - (a.creato || 0));
+        S.caricato = true; render();
+      }, e => { S.dbErrore = e.code; S.caricato = true; render(); });
+    }
+  }
+  if (!S.db) S.caricato = true;
+  render();
+}
+
+// ---------- Rendering principale ----------
+function render() {
+  document.querySelectorAll("#bar button[data-view]").forEach(b => {
+    if (b.dataset.view === "aggiungi") return;
+    b.toggleAttribute("aria-current", b.dataset.view === S.view);
+    if (b.dataset.view === S.view) b.setAttribute("aria-current", "page");
+  });
+  const app = $("#app");
+  if (S.view === "armadio") app.innerHTML = vistaArmadio();
+  else if (S.view === "outfit") app.innerHTML = vistaOutfit();
+  else if (S.view === "qualita") app.innerHTML = vistaQualita();
+}
+
+function avvisi() {
+  const out = [];
+  if (!S.caricato) out.push(`<div class="status"><span class="spin"></span>Apro il tuo armadio…</div>`);
+  else if (!S.db) out.push(`<div class="banner warn">Salvataggio non disponibile in questa vista: accedi a claude.ai e apri l'app da lì. I capi che aggiungi ora restano solo finché la pagina è aperta.</div>`);
+  if (S.dbErrore) out.push(`<div class="banner warn">Il collegamento all'archivio si è interrotto (${esc(S.dbErrore)}). Ricarica la pagina.</div>`);
+  if (S.caricato && !S.sample) out.push(`<div class="banner">Riconoscimento con Claude non disponibile in questa vista: puoi comunque inserire i capi a mano.</div>`);
+  return out.join("");
+}
+
+function vistaArmadio() {
+  const capi = S.capi.filter(c => (S.filtro === "tutti" || MACRO[c.categoria] === S.filtro) &&
+    (S.stagione === "tutte" || !c.stagioni?.length || c.stagioni.includes(S.stagione)));
+  const macroPresenti = ["tutti", ...Object.keys(MACRO_LABEL).filter(k => k !== "tutti" && S.capi.some(c => MACRO[c.categoria] === k))];
+  const chips = macroPresenti.map(k => `<button class="chip" data-filtro="${k}" aria-pressed="${S.filtro === k}">${MACRO_LABEL[k]}</button>`).join("");
+  const chipsStag = ["tutte", ...STAGIONI].map(s => `<button class="chip" data-stag="${s}" aria-pressed="${S.stagione === s}">${s === "tutte" ? "Tutte le stagioni" : cap(s)}</button>`).join("");
+  let corpo;
+  if (S.caricato && !S.capi.length) {
+    corpo = `<div class="empty"><h2>L'armadio è vuoto</h2>
+      <p class="muted">Fotografa un capo steso su uno sfondo chiaro e uniforme: Claude propone categoria, colore e stagione, tu confermi. Puoi aggiungere anche la foto dell'etichetta o inserire tutto a mano.</p>
+      <button class="btn primary" data-act="aggiungi">Aggiungi il primo capo</button></div>`;
+  } else {
+    corpo = `<div class="grid">${capi.map(cartaCapo).join("")}</div>` +
+      (S.capi.length && !capi.length ? `<p class="muted" style="margin-top:16px">Nessun capo con questi filtri.</p>` : "");
+  }
+  return `<div class="top"><div><h1>Armadio</h1><div class="count">${S.capi.length} ${S.capi.length === 1 ? "capo" : "capi"}</div></div></div>
+    <div class="stack">${avvisi()}
+    ${S.capi.length ? `<div class="chips" role="group" aria-label="Tipo">${chips}</div><div class="chips" role="group" aria-label="Stagione">${chipsStag}</div>` : ""}
+    </div>${corpo}`;
+}
+
+function cartaCapo(c) {
+  const img = c.immagine ? `<img src="${esc(c.immagine)}" alt="">` : `<span class="glyph">${esc((c.categoria || "?")[0].toUpperCase())}</span>`;
+  const col = COLORI[c.colore_primario] ? `<span class="sw" style="background:${COLORI[c.colore_primario]}"></span>` : "";
+  return `<button class="card" data-capo="${esc(c.id)}"><div class="ph">${img}</div>
+    <div class="name">${esc(c.nome || c.categoria || "Capo")}</div>
+    <div class="row mono muted">${col}${esc(c.colore_primario || "")}${c.taglia ? " · " + esc(c.taglia) : ""}</div></button>`;
+}
+const cap = s => s ? s[0].toUpperCase() + s.slice(1) : s;
+
+// ---------- Foglio modale ----------
+function apriFoglio(html, onClose) {
+  const m = $("#modal");
+  m.innerHTML = `<div class="sheet-wrap"><div class="sheet" role="dialog" aria-modal="true">${html}</div></div>`;
+  const wrap = m.firstElementChild;
+  wrap.addEventListener("click", e => { if (e.target === wrap) chiudiFoglio(); });
+  S.onClose = onClose;
+  return wrap.firstElementChild;
+}
+function chiudiFoglio() {
+  if (S.ctl) { S.ctl.abort(); S.ctl = null; }
+  $("#modal").innerHTML = ""; const f = S.onClose; S.onClose = null; f && f();
+}
+
+function sceltaAggiunta() {
+  const fotoOk = S.sample && S.images;
+  const sh = apriFoglio(`<header><h2>Aggiungi un capo</h2><button class="btn ghost" data-act="chiudi">Chiudi</button></header>
+    <div class="stack">
+      ${fotoOk ? "" : `<div class="banner">Il riconoscimento da foto non è disponibile in questa vista: le foto vengono salvate, i campi li compili tu.</div>`}
+      <button class="choice" data-mode="foto"><span class="ic">${icoCamera}</span><span><b>Fotografa il capo</b><small>Scontorno e scheda proposta da Claude. Capo steso, sfondo uniforme, luce naturale.</small></span></button>
+      <button class="choice" data-mode="etichetta"><span class="ic">${icoTag}</span><span><b>Fotografa l'etichetta</b><small>Composizione, lavaggio, brand e taglia. Poi puoi aggiungere la foto del capo.</small></span></button>
+      <button class="choice" data-mode="manuale"><span class="ic">${icoPen}</span><span><b>Inserisci a mano</b><small>Compili tu la scheda, senza foto.</small></span></button>
+    </div>`);
+  sh.addEventListener("click", e => {
+    const b = e.target.closest("[data-mode]"); if (!b) return;
+    const mode = b.dataset.mode;
+    if (mode === "manuale") return apriEditor(nuovaBozza("manuale"));
+    scegliFoto(file => { const bozza = nuovaBozza(mode); apriEditor(bozza); elaboraFoto(bozza, file, mode); });
+  });
+}
+const icoCamera = `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/></svg>`;
+const icoTag = `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 12V4h8l10 10-8 8z"/><circle cx="7.5" cy="8.5" r="1.5"/></svg>`;
+const icoPen = `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 20h4L19 9l-4-4L4 16z"/></svg>`;
+
+function scegliFoto(cb, galleria = false) {
+  const inp = document.createElement("input");
+  inp.type = "file"; inp.accept = "image/*";
+  if (!galleria) inp.setAttribute("capture", "environment");
+  inp.addEventListener("change", () => inp.files[0] && cb(inp.files[0]));
+  inp.click();
+}
+
+// ---------- Bozza e editor ----------
+function nuovaBozza(mode) {
+  return { id: null, inizio: Date.now(), modalita: new Set([mode]), valori: { stagioni: [] }, fonti: {}, proposta: {},
+           immagine: null, metodoImmagine: null, etichette: [], colorePixel: null, stato: [], errore: null };
+}
+function bozzaDaCapo(c) {
+  const b = nuovaBozza("modifica");
+  b.id = c.id; b.inizio = null; b.modalita = new Set(c.modalita || []);
+  b.valori = JSON.parse(JSON.stringify(c)); b.fonti = { ...(c.fonti || {}) }; b.proposta = c.proposta || {};
+  b.immagine = c.immagine || null; b.metodoImmagine = c.metodo_immagine || null; b.etichette = c.etichette || [];
+  b.colorePixel = c.colore_pixel || null; b.creato = c.creato;
+  return b;
+}
+
+function proponi(b, campo, valore, fonte) {
+  if (valore === null || valore === undefined || valore === "" || (Array.isArray(valore) && !valore.length)) return;
+  if (b.fonti[campo] === "tu") return; // non sovrascrivere ciò che l'utente ha corretto
+  b.proposta[campo + "|" + fonte] = valore;
+  b.valori[campo] = valore; b.fonti[campo] = fonte;
+}
+
+function apriEditor(b) {
+  S.bozza = b;
+  const sh = apriFoglio(`<div id="editor"></div>`);
+  disegnaEditor();
+  sh.addEventListener("click", clickEditor);
+  sh.addEventListener("input", inputEditor);
+  sh.addEventListener("change", inputEditor);
+}
+
+function badge(campo) {
+  const f = S.bozza.fonti[campo];
+  return f ? `<span class="src ${f}">${{ai:"Claude",etichetta:"etichetta",tu:"tu",pixel:"pixel"}[f] || f}</span>` : "";
+}
+
+function disegnaEditor() {
+  const b = S.bozza, v = b.valori, el = $("#editor"); if (!el) return;
+  const occupato = b.stato.length > 0;
+  const fig = [];
+  if (b.immagine) fig.push(`<figure><div class="frame"><img src="${esc(b.immagine)}" alt="Capo"></div><figcaption>${b.metodoImmagine === "scontorno" ? "scontornato" : b.metodoImmagine === "ritaglio" ? "ritaglio (sfondo non uniforme)" : "foto"}</figcaption></figure>`);
+  b.etichette.forEach((e, i) => fig.push(`<figure><div class="frame"><img src="${esc(e)}" alt="Etichetta ${i + 1}"></div><figcaption>etichetta ${i + 1}</figcaption></figure>`));
+  const pal = (campo, consentiNessuno) => `<div class="palette" role="group" aria-label="${campo}">
+    ${consentiNessuno ? `<button class="none" data-col="${campo}" data-val="" aria-pressed="${!v[campo]}" title="nessuno">—</button>` : ""}
+    ${Object.entries(COLORI).map(([n, h]) => `<button data-col="${campo}" data-val="${n}" aria-pressed="${v[campo] === n}" title="${n}" aria-label="${n}" style="background:${h}"></button>`).join("")}</div>`;
+  const sel = (campo, opzioni, vuoto = "—") => `<select id="f-${campo}" data-campo="${campo}"><option value="">${vuoto}</option>${opzioni.map(o => `<option ${v[campo] === o ? "selected" : ""}>${esc(o)}</option>`).join("")}</select>`;
+  const px = b.colorePixel;
+  el.innerHTML = `<header><h2>${b.id ? "Modifica capo" : "Nuovo capo"}</h2><button class="btn ghost" data-act="chiudi">Annulla</button></header>
+  <div class="stack">
+    ${fig.length ? `<div class="preview">${fig.join("")}</div>` : ""}
+    <div class="row">
+      <button class="btn" data-act="foto-capo" ${occupato ? "disabled" : ""}>${b.immagine ? "Rifai foto del capo" : "Foto del capo"}</button>
+      <button class="btn" data-act="foto-etichetta" ${occupato ? "disabled" : ""}>${b.etichette.length ? "Altra etichetta" : "Foto etichetta"}</button>
+      <button class="btn ghost" data-act="galleria" ${occupato ? "disabled" : ""}>Dalla galleria</button>
+    </div>
+    ${b.stato.map(s => `<div class="status"><span class="spin"></span>${esc(s)}</div>`).join("")}
+    ${b.errore ? `<div class="err">${esc(b.errore)}</div>` : ""}
+    <div class="field"><label for="f-nome">Nome ${badge("nome")}</label><input type="text" id="f-nome" data-campo="nome" value="${esc(v.nome || "")}" placeholder="es. camicia oxford azzurra"></div>
+    <div class="field"><label for="f-categoria">Categoria ${badge("categoria")}</label>${sel("categoria", CATEGORIE, "Scegli…")}</div>
+    <div class="field"><div class="lab">Colore principale ${badge("colore_primario")}</div>${pal("colore_primario", false)}
+      ${px ? `<div class="hint">Dai pixel della foto: <span class="sw" style="background:${px.hex}"></span> ${esc(px.nome)}${px.nome !== v.colore_primario ? ` · <button class="btn ghost" style="padding:2px 8px" data-act="usa-pixel">usa questo</button>` : ""}</div>` : ""}</div>
+    <div class="field"><div class="lab">Colore secondario ${badge("colore_secondario")}</div>${pal("colore_secondario", true)}</div>
+    <div class="field"><label for="f-fantasia">Fantasia ${badge("fantasia")}</label>${sel("fantasia", FANTASIE)}</div>
+    <div class="field"><div class="lab">Stagioni ${badge("stagioni")}</div><div class="seg">${STAGIONI.map(s => `<button data-stag-ed="${s}" aria-pressed="${(v.stagioni || []).includes(s)}">${cap(s)}</button>`).join("")}</div></div>
+    <div class="field"><div class="lab">Calore ${badge("calore")}</div><div class="seg">${CALORE.map(s => `<button data-seg="calore" data-val="${s}" aria-pressed="${v.calore === s}">${cap(s)}</button>`).join("")}</div></div>
+    <div class="field"><div class="lab">Formalità ${badge("formalita")}</div><div class="seg">${Object.entries(FORMALITA).map(([k, l]) => `<button data-seg="formalita" data-val="${k}" aria-pressed="${String(v.formalita) === k}">${l}</button>`).join("")}</div></div>
+    <div class="field"><label for="f-materiale">Materiale ${badge("materiale")}</label>${sel("materiale", MATERIALI)}</div>
+    <div class="field"><label for="f-composizione_testo">Composizione ${badge("composizione_testo")}</label><input type="text" id="f-composizione_testo" data-campo="composizione_testo" value="${esc(v.composizione_testo || "")}" placeholder="es. 80% lana, 20% poliammide"></div>
+    <div class="row" style="align-items:start">
+      <div class="field" style="flex:1 1 140px"><label for="f-brand">Brand ${badge("brand")}</label><input type="text" id="f-brand" data-campo="brand" value="${esc(v.brand || "")}"></div>
+      <div class="field" style="flex:1 1 100px"><label for="f-taglia">Taglia ${badge("taglia")}</label><input type="text" id="f-taglia" data-campo="taglia" value="${esc(v.taglia || "")}"></div>
+    </div>
+    <div class="row" style="align-items:start">
+      <div class="field" style="flex:1 1 160px"><label for="f-lavaggio">Lavaggio ${badge("lavaggio")}</label>${sel("lavaggio", LAVAGGIO)}</div>
+      <div class="field" style="flex:1 1 100px"><label for="f-temperatura">Temp. max °C ${badge("temperatura")}</label><input type="number" id="f-temperatura" data-campo="temperatura" inputmode="numeric" value="${esc(v.temperatura ?? "")}"></div>
+    </div>
+    ${b.id ? `<div id="del-zone"><button class="btn danger" data-act="elimina">Elimina capo</button></div>` : ""}
+    <div class="actions"><button class="btn primary" data-act="salva" ${occupato ? "disabled" : ""}>${b.id ? "Salva modifiche" : "Aggiungi all'armadio"}</button></div>
+  </div>`;
+}
+
+function segnaUtente(campo, valore) {
+  const b = S.bozza;
+  b.valori[campo] = valore;
+  b.fonti[campo] = "tu";
+}
+
+function clickEditor(e) {
+  const t = e.target.closest("button"); if (!t) return;
+  const b = S.bozza;
+  if (t.dataset.col) { segnaUtente(t.dataset.col, t.dataset.val || null); disegnaEditor(); return; }
+  if (t.dataset.stagEd) {
+    const s = t.dataset.stagEd, cur = new Set(b.valori.stagioni || []);
+    cur.has(s) ? cur.delete(s) : cur.add(s);
+    segnaUtente("stagioni", STAGIONI.filter(x => cur.has(x))); disegnaEditor(); return;
+  }
+  if (t.dataset.seg) {
+    const val = t.dataset.seg === "formalita" ? Number(t.dataset.val) : t.dataset.val;
+    segnaUtente(t.dataset.seg, b.valori[t.dataset.seg] === val ? null : val); disegnaEditor(); return;
+  }
+  const act = t.dataset.act;
+  if (act === "chiudi") return chiudiFoglio();
+  if (act === "foto-capo") return scegliFoto(f => elaboraFoto(b, f, "foto"));
+  if (act === "foto-etichetta") return scegliFoto(f => elaboraFoto(b, f, "etichetta"));
+  if (act === "galleria") return sceltaGalleria(b);
+  if (act === "usa-pixel") { segnaUtente("colore_primario", b.colorePixel.nome); b.fonti.colore_primario = "pixel"; disegnaEditor(); return; }
+  if (act === "salva") return salva(b);
+  if (act === "elimina") {
+    $("#del-zone").innerHTML = `<div class="row"><span>Eliminare questo capo?</span><button class="btn danger" data-act="conferma-elimina">Elimina</button><button class="btn ghost" data-act="annulla-elimina">No</button></div>`; return;
+  }
+  if (act === "annulla-elimina") return disegnaEditor();
+  if (act === "conferma-elimina") return elimina(b);
+}
+function sceltaGalleria(b) {
+  const z = document.createElement("div");
+  z.className = "row";
+  z.innerHTML = `<span class="hint">Dalla galleria come:</span><button class="btn" data-g="foto">capo</button><button class="btn" data-g="etichetta">etichetta</button>`;
+  const anchor = $("#editor .row"); anchor.after(z);
+  z.addEventListener("click", e => { const g = e.target.closest("[data-g]"); if (!g) return; e.stopPropagation(); z.remove(); scegliFoto(f => elaboraFoto(b, f, g.dataset.g), true); });
+}
+function inputEditor(e) {
+  const t = e.target; const campo = t.dataset?.campo; if (!campo) return;
+  let val = t.value.trim();
+  if (campo === "temperatura") val = val === "" ? null : Number(val);
+  if (e.type === "change" && t.tagName === "SELECT") { segnaUtente(campo, val || null); disegnaEditor(); return; }
+  if (e.type === "input" && t.tagName !== "SELECT") { segnaUtente(campo, val === "" ? null : val); const lab = t.closest(".field").querySelector("label"); if (lab && !lab.querySelector(".src")) lab.insertAdjacentHTML("beforeend", badge(campo)); else if (lab) lab.querySelector(".src").outerHTML = badge(campo); }
+}
+
+// ---------- Foto: preparazione, scontorno, colore ----------
+async function caricaImmagine(file, lato = 1568) {
+  let bmp;
+  try { bmp = await createImageBitmap(file, { imageOrientation: "from-image" }); }
+  catch {
+    bmp = await new Promise((ok, ko) => { const i = new Image(); i.onload = () => ok(i); i.onerror = () => ko(new Error("immagine non leggibile")); i.src = URL.createObjectURL(file); });
+  }
+  const w = bmp.width || bmp.naturalWidth, h = bmp.height || bmp.naturalHeight;
+  const k = Math.min(1, lato / Math.max(w, h));
+  const c = document.createElement("canvas"); c.width = Math.round(w * k); c.height = Math.round(h * k);
+  c.getContext("2d").drawImage(bmp, 0, 0, c.width, c.height);
+  return c;
+}
+const toBlob = (c, type = "image/jpeg", q = 0.88) => new Promise(r => c.toBlob(r, type, q));
+
+function rgbToLab(r, g, b) {
+  const f = v => { v /= 255; return v > 0.04045 ? ((v + 0.055) / 1.055) ** 2.4 : v / 12.92; };
+  const R = f(r), G = f(g), B = f(b);
+  let x = (0.4124 * R + 0.3576 * G + 0.1805 * B) / 0.95047, y = 0.2126 * R + 0.7152 * G + 0.0722 * B, z = (0.0193 * R + 0.1192 * G + 0.9505 * B) / 1.08883;
+  const t = v => v > 0.008856 ? Math.cbrt(v) : 7.787 * v + 16 / 116;
+  x = t(x); y = t(y); z = t(z);
+  return [116 * y - 16, 500 * (x - y), 200 * (y - z)];
+}
+const hexRgb = h => [1, 3, 5].map(i => parseInt(h.slice(i, i + 2), 16));
+const PAL_LAB = Object.entries(COLORI).map(([n, h]) => [n, rgbToLab(...hexRgb(h))]);
+const dist = (a, b) => Math.hypot(a[0] - b[0], a[1] - b[1], a[2] - b[2]);
+function nomeColore(lab) { let best = null, d = 1e9; for (const [n, l] of PAL_LAB) { const x = dist(lab, l); if (x < d) { d = x; best = n; } } return best; }
+
+// Scontorno: sfondo stimato dai bordi della foto, limitato al riquadro indicato da Claude,
+// poi componente connessa più grande e riempimento dei buchi. Se il risultato è implausibile
+// si usa il semplice ritaglio rettangolare.
+function scontorna(src, box) {
+  const W = src.width, H = src.height;
+  const k = Math.min(1, 700 / Math.max(W, H));
+  const w = Math.round(W * k), h = Math.round(H * k);
+  const c = document.createElement("canvas"); c.width = w; c.height = h;
+  const ctx = c.getContext("2d", { willReadFrequently: true }); ctx.drawImage(src, 0, 0, w, h);
+  const px = ctx.getImageData(0, 0, w, h).data;
+  const labAt = new Float32Array(w * h * 3);
+  for (let i = 0; i < w * h; i++) { const l = rgbToLab(px[i * 4], px[i * 4 + 1], px[i * 4 + 2]); labAt.set(l, i * 3); }
+  const b = Math.max(2, Math.round(Math.min(w, h) * 0.04));
+  const bordo = [];
+  for (let y = 0; y < h; y += 2) for (let x = 0; x < w; x += 2) if (x < b || y < b || x >= w - b || y >= h - b) bordo.push(y * w + x);
+  const med = [0, 1, 2].map(j => { const a = bordo.map(i => labAt[i * 3 + j]).sort((p, q) => p - q); return a[a.length >> 1]; });
+  const rumore = bordo.map(i => dist([labAt[i * 3], labAt[i * 3 + 1], labAt[i * 3 + 2]], med)).sort((p, q) => p - q);
+  const soglia = Math.max(12, rumore[Math.floor(rumore.length * 0.95)] * 1.25);
+  const m = 0.03;
+  let x0 = 0, y0 = 0, x1 = w, y1 = h;
+  if (box && box.w > 0.05 && box.h > 0.05) {
+    x0 = Math.max(0, Math.floor((box.x - m) * w)); y0 = Math.max(0, Math.floor((box.y - m) * h));
+    x1 = Math.min(w, Math.ceil((box.x + box.w + m) * w)); y1 = Math.min(h, Math.ceil((box.y + box.h + m) * h));
+  }
+  const mask = new Uint8Array(w * h);
+  for (let y = y0; y < y1; y++) for (let x = x0; x < x1; x++) { const i = y * w + x; if (dist([labAt[i * 3], labAt[i * 3 + 1], labAt[i * 3 + 2]], med) > soglia) mask[i] = 1; }
+  // componente connessa più grande
+  const lbl = new Int32Array(w * h); let bestL = 0, bestN = 0, L = 0; const q = new Int32Array(w * h);
+  for (let s = 0; s < w * h; s++) {
+    if (!mask[s] || lbl[s]) continue;
+    L++; let qh = 0, qt = 0, n = 0; q[qt++] = s; lbl[s] = L;
+    while (qh < qt) { const i = q[qh++]; n++; const x = i % w, y = (i / w) | 0;
+      if (x > 0 && mask[i - 1] && !lbl[i - 1]) { lbl[i - 1] = L; q[qt++] = i - 1; }
+      if (x < w - 1 && mask[i + 1] && !lbl[i + 1]) { lbl[i + 1] = L; q[qt++] = i + 1; }
+      if (y > 0 && mask[i - w] && !lbl[i - w]) { lbl[i - w] = L; q[qt++] = i - w; }
+      if (y < h - 1 && mask[i + w] && !lbl[i + w]) { lbl[i + w] = L; q[qt++] = i + w; } }
+    if (n > bestN) { bestN = n; bestL = L; }
+  }
+  for (let i = 0; i < w * h; i++) mask[i] = lbl[i] === bestL && bestL ? 1 : 0;
+  // riempimento dei buchi: tutto ciò che dallo sfondo esterno non si raggiunge è capo
+  const out = new Uint8Array(w * h); let qh = 0, qt = 0;
+  const push = i => { if (!mask[i] && !out[i]) { out[i] = 1; q[qt++] = i; } };
+  for (let x = 0; x < w; x++) { push(x); push((h - 1) * w + x); }
+  for (let y = 0; y < h; y++) { push(y * w); push(y * w + w - 1); }
+  while (qh < qt) { const i = q[qh++], x = i % w, y = (i / w) | 0;
+    if (x > 0) push(i - 1); if (x < w - 1) push(i + 1); if (y > 0) push(i - w); if (y < h - 1) push(i + w); }
+  let n = 0, mx0 = w, my0 = h, mx1 = 0, my1 = 0;
+  for (let i = 0; i < w * h; i++) { const on = !out[i]; mask[i] = on ? 1 : 0; if (on) { n++; const x = i % w, y = (i / w) | 0; if (x < mx0) mx0 = x; if (x > mx1) mx1 = x; if (y < my0) my0 = y; if (y > my1) my1 = y; } }
+  const areaBox = (x1 - x0) * (y1 - y0), quota = n / areaBox;
+  const plausibile = n > 400 && quota > 0.12 && quota < 0.97;
+  // colore dominante (k-means in Lab sui pixel del capo, o del riquadro se non scontornato)
+  const campioni = [];
+  const passo = Math.max(1, Math.floor(Math.sqrt(((plausibile ? n : areaBox)) / 6000)));
+  for (let y = y0; y < y1; y += passo) for (let x = x0; x < x1; x += passo) { const i = y * w + x; if (!plausibile || mask[i]) campioni.push(i); }
+  const colore = kmeansColore(campioni, labAt, px);
+  // immagine finale
+  const fx0 = plausibile ? mx0 : x0, fy0 = plausibile ? my0 : y0, fw = (plausibile ? mx1 + 1 : x1) - fx0, fh = (plausibile ? my1 + 1 : y1) - fy0;
+  const img = ctx.getImageData(fx0, fy0, fw, fh);
+  if (plausibile) for (let y = 0; y < fh; y++) for (let x = 0; x < fw; x++) if (!mask[(y + fy0) * w + x + fx0]) img.data[(y * fw + x) * 4 + 3] = 0;
+  const o = document.createElement("canvas"); o.width = fw; o.height = fh; o.getContext("2d").putImageData(img, 0, 0);
+  return { canvas: o, metodo: plausibile ? "scontorno" : "ritaglio", colore };
+}
+
+function kmeansColore(idx, labAt, px) {
+  if (idx.length < 50) return null;
+  const K = 4, pts = idx.map(i => [labAt[i * 3], labAt[i * 3 + 1], labAt[i * 3 + 2]]);
+  let cent = Array.from({ length: K }, (_, j) => pts[Math.floor((j + 0.5) * pts.length / K)].slice());
+  const asg = new Int32Array(pts.length);
+  for (let it = 0; it < 12; it++) {
+    const sum = Array.from({ length: K }, () => [0, 0, 0, 0]);
+    pts.forEach((p, i) => { let bj = 0, bd = 1e9; cent.forEach((c, j) => { const d = dist(p, c); if (d < bd) { bd = d; bj = j; } }); asg[i] = bj; const s = sum[bj]; s[0] += p[0]; s[1] += p[1]; s[2] += p[2]; s[3]++; });
+    cent = sum.map((s, j) => s[3] ? [s[0] / s[3], s[1] / s[3], s[2] / s[3]] : cent[j]);
+  }
+  const per = {};
+  cent.forEach((c, j) => { const quota = asg.filter(a => a === j).length / pts.length; const nome = nomeColore(c); per[nome] = (per[nome] || 0) + quota; });
+  const ord = Object.entries(per).sort((a, b) => b[1] - a[1]);
+  // hex medio del cluster principale, per la miniatura del colore
+  const jMax = cent.map((_, j) => asg.filter(a => a === j).length).reduce((bj, n, j, arr) => n > arr[bj] ? j : bj, 0);
+  let r = 0, g = 0, bb = 0, n = 0;
+  idx.forEach((i, k) => { if (asg[k] === jMax) { r += px[i * 4]; g += px[i * 4 + 1]; bb += px[i * 4 + 2]; n++; } });
+  const hex = "#" + [r, g, bb].map(v => Math.round(v / Math.max(1, n)).toString(16).padStart(2, "0")).join("");
+  return { nome: ord[0][0], hex, secondario: ord[1] && ord[1][1] >= 0.15 ? ord[1][0] : null };
+}
+
+function miniatura(canvas, lato = 420, alpha = true, maxLen = 150000) {
+  for (const l of [lato, 340, 260]) {
+    const k = Math.min(1, l / Math.max(canvas.width, canvas.height));
+    const c = document.createElement("canvas"); c.width = Math.max(1, Math.round(canvas.width * k)); c.height = Math.max(1, Math.round(canvas.height * k));
+    c.getContext("2d").drawImage(canvas, 0, 0, c.width, c.height);
+    let url = c.toDataURL("image/webp", 0.82);
+    if (!url.startsWith("data:image/webp")) url = alpha ? c.toDataURL("image/png") : c.toDataURL("image/jpeg", 0.8);
+    if (url.length < maxLen) return url;
+  }
+  return null;
+}
+
+// ---------- Claude ----------
+const PROMPT_FOTO = `Sei il catalogatore di un'app di armadio digitale. L'immagine mostra un capo di abbigliamento (o una scarpa o un accessorio). Compila la sua scheda: i valori servono a creare abbinamenti per colore, tipologia e stagione, quindi conta la correttezza più della completezza.
+
+Rispondi SOLO con un oggetto JSON con queste chiavi:
+{"capo_singolo": true|false, "categoria": uno di ${JSON.stringify(CATEGORIE)},
+ "nome": "frase breve e concreta, es. camicia oxford azzurra a maniche lunghe",
+ "colore_primario": uno di ${JSON.stringify(Object.keys(COLORI))},
+ "colore_secondario": uno dei colori sopra oppure null,
+ "fantasia": uno di ${JSON.stringify(FANTASIE)},
+ "materiale": uno di ${JSON.stringify(MATERIALI)},
+ "stagioni": sottoinsieme di ${JSON.stringify(STAGIONI)},
+ "calore": uno di ${JSON.stringify(CALORE)},
+ "formalita": intero da 1 a 5 (1 sport/casa, 2 casual, 3 smart casual, 4 business/elegante, 5 cerimonia),
+ "brand": stringa solo se un logo o una scritta del brand è leggibile, altrimenti null,
+ "riquadro": {"x":0-1,"y":0-1,"w":0-1,"h":0-1} rettangolo che contiene il capo principale, in frazioni di larghezza e altezza dell'immagine (origine in alto a sinistra),
+ "campi_incerti": [nomi dei campi su cui la foto non permette una scelta sicura]}
+
+Regole: descrivi solo il capo principale (capo_singolo false se ce ne sono più di uno). Il colore primario è quello che copre la superficie maggiore del capo, mai lo sfondo; considera che luce artificiale e ombre alterano i colori. Colore secondario solo se occupa una parte rilevante del capo. Materiale solo se riconoscibile dalla trama, altrimenti "non determinabile"; il denim è un materiale, non una fantasia. Stagioni: tutte quelle in cui il capo si indossa normalmente in un clima temperato.`;
+
+const PROMPT_ETICHETTA = `Sei il catalogatore di un'app di armadio digitale. L'immagine mostra un'etichetta interna di un capo (etichetta del brand, di composizione o di manutenzione). Estrai i dati.
+
+Rispondi SOLO con un oggetto JSON con queste chiavi:
+{"leggibile": true|false, "testo_letto": "trascrizione del testo leggibile",
+ "brand": stringa o null, "taglia": stringa o null,
+ "composizione": [{"fibra": uno di ${JSON.stringify(FIBRE)}, "percentuale": numero, "parte": "principale"|"fodera"|"imbottitura"|"inserti"|altro}],
+ "lavaggio": uno di ${JSON.stringify(LAVAGGIO)} oppure null,
+ "temperatura_max": intero in °C o null,
+ "campi_incerti": [nomi dei campi letti con incertezza]}
+
+Regole: riconduci i nomi delle fibre in qualunque lingua o sigla all'elenco (wool/laine/WO = lana, CO = cotone, PES/polyester = poliestere, PA/nylon = poliammide, EA/EL/elastane/spandex = elastan, CV/viscose = viscosa, LI/linen = lino, WS/cashmere = cachemire, down/duvet/feather = piuma). Simboli ISO 3758: vasca con numero = temperatura massima; mano nella vasca = a mano; vasca barrata = non lavare; cerchio con P/F e vasca barrata = solo a secco. Ogni dato assente o illeggibile va a null (o lista vuota). Non dedurre brand o taglia da elementi non scritti sull'etichetta. leggibile = false se l'etichetta è troppo sfocata, tagliata o sbiadita.`;
+
+const inLista = (v, l) => l.includes(v) ? v : null;
+const MSG_ERR = { not_granted: "Non hai autorizzato l'app a usare Claude: compila i campi a mano.", rate_limited: "Troppe richieste ravvicinate o limite di utilizzo raggiunto: riprova tra poco o compila a mano.",
+  image_rejected: "La foto non è utilizzabile (formato o dimensione): provane un'altra.", refused: "Claude non ha elaborato questa foto: compila i campi a mano.",
+  invalid_json: "La risposta di Claude non era leggibile: riprova con la stessa foto.", images_unavailable: "In questa vista non si possono inviare foto a Claude: compila a mano.",
+  session_expired: "Sessione scaduta: accedi di nuovo a claude.ai.", sampling_disabled: "Claude non è disponibile per questo account: compila a mano." };
+
+async function elaboraFoto(b, file, tipo) {
+  const etichetta = tipo === "etichetta";
+  b.modalita.add(etichetta ? "etichetta" : "foto"); b.errore = null;
+  b.stato = ["Preparo la foto…"]; disegnaEditor();
+  let canvas;
+  try { canvas = await caricaImmagine(file); }
+  catch { b.stato = []; b.errore = "Non riesco ad aprire questa immagine: prova con una foto JPG o PNG."; return disegnaEditor(); }
+  const jpeg = await toBlob(canvas);
+  let dati = null;
+  if (S.sample && S.images) {
+    b.stato = [etichetta ? "Claude sta leggendo l'etichetta…" : "Claude sta analizzando il capo…"]; disegnaEditor();
+    S.ctl = new AbortController();
+    const t0 = performance.now();
+    try {
+      dati = await S.sample.json(etichetta ? PROMPT_ETICHETTA : PROMPT_FOTO, { images: [jpeg], signal: S.ctl.signal });
+      b.secondiAI = (b.secondiAI || 0) + (performance.now() - t0) / 1000;
+    } catch (e) {
+      if (e && e.code === "cancelled") return;
+      b.errore = MSG_ERR[e && e.code] || "Analisi non riuscita per un problema temporaneo: riprova o compila a mano.";
+      if (e && (e.code === "not_granted" || e.code === "images_unavailable" || e.code === "sampling_disabled")) S.images = false;
+    } finally { S.ctl = null; }
+  }
+  if (S.bozza !== b) return; // editor chiuso nel frattempo
+  if (etichetta) {
+    const mini = miniatura(canvas, 360, false, 45000); if (mini) b.etichette = [...b.etichette, mini].slice(-2);
+    if (dati) applicaEtichetta(b, dati);
+  } else {
+    b.stato = ["Scontorno il capo…"]; disegnaEditor();
+    await new Promise(r => setTimeout(r, 30));
+    const box = dati && dati.riquadro && typeof dati.riquadro === "object" ? { x: +dati.riquadro.x, y: +dati.riquadro.y, w: +dati.riquadro.w, h: +dati.riquadro.h } : null;
+    const r = scontorna(canvas, box && [box.x, box.y, box.w, box.h].every(Number.isFinite) ? box : null);
+    b.immagine = miniatura(r.canvas); b.metodoImmagine = r.metodo; b.colorePixel = r.colore;
+    if (r.colore) b.proposta["colore_primario|pixel"] = r.colore.nome;
+    if (dati) applicaFoto(b, dati);
+    else if (r.colore) { proponi(b, "colore_primario", r.colore.nome, "pixel"); }
+  }
+  b.stato = []; disegnaEditor();
+}
+
+function applicaFoto(b, d) {
+  if (d.capo_singolo === false) b.errore = "Nella foto sembrano esserci più capi: controlla la scheda.";
+  proponi(b, "nome", typeof d.nome === "string" ? d.nome.slice(0, 80) : null, "ai");
+  proponi(b, "categoria", inLista(d.categoria, CATEGORIE), "ai");
+  proponi(b, "colore_primario", inLista(d.colore_primario, Object.keys(COLORI)), "ai");
+  proponi(b, "colore_secondario", inLista(d.colore_secondario, Object.keys(COLORI)), "ai");
+  proponi(b, "fantasia", inLista(d.fantasia, FANTASIE), "ai");
+  if (b.fonti.materiale !== "etichetta") proponi(b, "materiale", d.materiale !== "non determinabile" ? inLista(d.materiale, MATERIALI) : null, "ai");
+  proponi(b, "stagioni", Array.isArray(d.stagioni) ? STAGIONI.filter(s => d.stagioni.includes(s)) : null, "ai");
+  proponi(b, "calore", inLista(d.calore, CALORE), "ai");
+  const f = Number(d.formalita); proponi(b, "formalita", f >= 1 && f <= 5 ? Math.round(f) : null, "ai");
+  if (!b.valori.brand) proponi(b, "brand", typeof d.brand === "string" ? d.brand : null, "ai");
+}
+
+function testoComposizione(comp) {
+  const fmt = c => `${+c.percentuale}% ${c.fibra}`;
+  const princ = comp.filter(c => !/fodera/i.test(c.parte || "")), fod = comp.filter(c => /fodera/i.test(c.parte || ""));
+  return princ.map(fmt).join(", ") + (fod.length ? ` (fodera: ${fod.map(fmt).join(", ")})` : "");
+}
+function applicaEtichetta(b, d) {
+  if (d.leggibile === false) { b.errore = "L'etichetta non è leggibile: prova con più luce o più da vicino."; return; }
+  proponi(b, "brand", typeof d.brand === "string" ? d.brand : null, "etichetta");
+  proponi(b, "taglia", typeof d.taglia === "string" ? d.taglia : null, "etichetta");
+  proponi(b, "lavaggio", inLista(d.lavaggio, LAVAGGIO), "etichetta");
+  const t = Number(d.temperatura_max); proponi(b, "temperatura", d.temperatura_max != null && Number.isFinite(t) ? t : null, "etichetta");
+  const comp = Array.isArray(d.composizione) ? d.composizione.filter(c => c && FIBRE.includes(c.fibra) && Number.isFinite(+c.percentuale)) : [];
+  if (comp.length) {
+    b.valori.composizione = comp;
+    proponi(b, "composizione_testo", testoComposizione(comp), "etichetta");
+    const princ = comp.filter(c => !/fodera/i.test(c.parte || "")); const base = princ.length ? princ : comp;
+    const dom = base.reduce((a, c) => +c.percentuale > +a.percentuale ? c : a);
+    if (b.fonti.materiale !== "tu") { b.fonti.materiale = null; proponi(b, "materiale", FIBRA_A_MATERIALE[dom.fibra] || "misto", "etichetta"); }
+    // La stagione dalla composizione è solo una stima: la usiamo se la foto non l'ha già indicata.
+    if (!b.valori.stagioni?.length) {
+      const pesi = base.map(c => [CALORE_FIBRA[c.fibra], +c.percentuale]).filter(([v, p]) => v !== undefined && p > 0);
+      if (pesi.length) {
+        const ind = pesi.reduce((s, [v, p]) => s + v * p, 0) / pesi.reduce((s, [, p]) => s + p, 0);
+        const [cal, st] = ind < 0.8 ? ["leggero", ["primavera", "estate"]] : ind <= 1.6 ? ["medio", ["primavera", "estate", "autunno"]] : ind < 2.4 ? ["medio", ["primavera", "autunno", "inverno"]] : ["pesante", ["autunno", "inverno"]];
+        proponi(b, "stagioni", st, "etichetta"); if (!b.valori.calore) proponi(b, "calore", cal, "etichetta");
+      }
+    }
+  }
+}
+
+// ---------- Salvataggio ----------
+const CAMPI = ["nome","categoria","colore_primario","colore_secondario","fantasia","materiale","composizione_testo","stagioni","calore","formalita","brand","taglia","lavaggio","temperatura"];
+async function salva(b) {
+  const v = b.valori;
+  if (!v.categoria) { b.errore = "Scegli almeno la categoria."; return disegnaEditor(); }
+  const doc = { tipo: "capo" };
+  CAMPI.forEach(c => { if (v[c] !== undefined && v[c] !== null && v[c] !== "") doc[c] = v[c]; });
+  if (v.composizione) doc.composizione = v.composizione;
+  doc.fonti = Object.fromEntries(Object.entries(b.fonti).filter(([c, f]) => f && doc[c] !== undefined));
+  doc.proposta = b.proposta;
+  doc.immagine = b.immagine; doc.metodo_immagine = b.metodoImmagine; doc.etichette = b.etichette;
+  doc.colore_pixel = b.colorePixel; doc.modalita = [...b.modalita].filter(m => m !== "modifica");
+  doc.creato = b.creato || Date.now(); doc.aggiornato = Date.now();
+  if (b.inizio) { doc.secondi_inserimento = Math.round((Date.now() - b.inizio) / 1000); doc.secondi_ai = Math.round(b.secondiAI || 0); }
+  for (const k of Object.keys(doc)) if (doc[k] === null || doc[k] === undefined) delete doc[k];
+  // Un documento può pesare al massimo 256 KiB: se serve, si rinuncia alle foto delle etichette.
+  while (JSON.stringify(doc).length > 240000 && doc.etichette?.length) doc.etichette = doc.etichette.slice(1);
+  const id = b.id || "capo_" + uid();
+  if (!S.db) { S.capi = [{ id, ...doc }, ...S.capi.filter(c => c.id !== id)]; chiudiFoglio(); render(); return; }
+  const btn = $('[data-act="salva"]'); if (btn) { btn.disabled = true; btn.textContent = "Salvo…"; }
+  try { await S.db.collection("data/users/" + S.uid).doc(id).set(doc); chiudiFoglio(); }
+  catch (e) {
+    b.errore = e.code === "quota_exceeded" ? "Spazio dell'armadio esaurito: elimina qualche capo." : e.code === "invalid_argument" ? "Non hai i permessi per salvare in questo armadio." : "Salvataggio non riuscito: riprova.";
+    disegnaEditor();
+  }
+}
+async function elimina(b) {
+  if (!S.db) { S.capi = S.capi.filter(c => c.id !== b.id); chiudiFoglio(); render(); return; }
+  try { await S.db.collection("data/users/" + S.uid).doc(b.id).delete(); chiudiFoglio(); }
+  catch { b.errore = "Eliminazione non riuscita: riprova."; disegnaEditor(); }
+}
+
+// ---------- Abbinamenti ----------
+function hsl(hex) {
+  const [r, g, b] = hexRgb(hex).map(v => v / 255), mx = Math.max(r, g, b), mn = Math.min(r, g, b), l = (mx + mn) / 2, d = mx - mn;
+  if (!d) return [0, 0, l];
+  const s = d / (1 - Math.abs(2 * l - 1));
+  let h = mx === r ? ((g - b) / d) % 6 : mx === g ? (b - r) / d + 2 : (r - g) / d + 4;
+  return [(h * 60 + 360) % 360, s, l];
+}
+function coppiaColori(a, b) {
+  if (!a || !b) return [1, null];
+  if (NEUTRI.has(a) || NEUTRI.has(b)) return [2, null];
+  if (a === b) return [1.5, `tono su tono ${a}`];
+  const ha = hsl(COLORI[a])[0], hb = hsl(COLORI[b])[0]; let d = Math.abs(ha - hb); d = Math.min(d, 360 - d);
+  if (d <= 40) return [1.5, `colori vicini (${a} e ${b})`];
+  if (d >= 150) return [1, `contrasto complementare (${a} e ${b})`];
+  return [-1.5, `${a} e ${b} rischiano di stonare`];
+}
+function valuta(items, target) {
+  let score = 0; const note = [];
+  const colori = items.map(i => i.colore_primario).filter(Boolean);
+  for (let i = 0; i < colori.length; i++) for (let j = i + 1; j < colori.length; j++) { const [s, n] = coppiaColori(colori[i], colori[j]); score += s; if (n && !note.includes(n)) note.push(n); }
+  const accenti = [...new Set(colori.filter(c => !NEUTRI.has(c)))];
+  if (accenti.length === 0) note.push("tutto su neutri");
+  else if (accenti.length === 1) { score += 1; note.push(`neutri con un accento ${accenti[0]}`); }
+  else if (accenti.length > 2) { score -= 2; note.push("troppi colori accesi"); }
+  const fantasie = items.filter(i => i.fantasia && i.fantasia !== "tinta unita");
+  if (fantasie.length > 1) { score -= 3; note.push("più di una fantasia"); } else if (fantasie.length === 1) note.push(`una sola fantasia (${fantasie[0].fantasia})`);
+  const f = items.map(i => i.formalita).filter(Number.isFinite);
+  const scarto = f.reduce((s, x) => s + Math.abs(x - target), 0);
+  score -= scarto * 0.8;
+  if (f.length && Math.max(...f) - Math.min(...f) >= 3) { score -= 2; note.push("formalità molto diverse tra i capi"); }
+  return { score, note };
+}
+function generaOutfit() {
+  const st = S.outfitStagione, target = S.outfitFormalita;
+  const ok = c => !c.stagioni?.length || c.stagioni.includes(st);
+  const per = m => S.capi.filter(c => MACRO[c.categoria] === m && ok(c));
+  const sopra = per("sopra"), sotto = per("sotto"), interi = per("intero"), capi_s = per("capospalla"), scarpe = per("scarpe");
+  const basi = [];
+  sopra.forEach(t => sotto.forEach(bt => basi.push([t, bt])));
+  interi.forEach(i => basi.push([i]));
+  const freddo = st === "autunno" || st === "inverno";
+  const cand = basi.map(base => {
+    let items = base.slice();
+    const migliore = (lista, obbligo) => { let best = null, bs = obbligo ? -1e9 : valuta(items, target).score;
+      lista.forEach(x => { const s = valuta([...items, x], target).score; if (s > bs) { bs = s; best = x; } }); return best; };
+    const cs = capi_s.length ? migliore(capi_s, freddo) : null; if (cs) items.push(cs);
+    const sc = scarpe.length ? migliore(scarpe, true) : null; if (sc) items.push(sc);
+    return { items, ...valuta(items, target) };
+  }).sort((a, b) => b.score - a.score);
+  const scelti = [], uso = {};
+  for (const o of cand) {
+    if (scelti.length >= 6) break;
+    if (o.items.slice(0, 2).some(i => (uso[i.id] || 0) >= 2)) continue;
+    o.items.forEach(i => uso[i.id] = (uso[i.id] || 0) + 1); scelti.push(o);
+  }
+  const mancano = [];
+  if (!basi.length) {
+    if (!sopra.length && !interi.length) mancano.push("capi sopra (t-shirt, camicie, maglie) o abiti");
+    if (!sotto.length && !interi.length) mancano.push("capi sotto (pantaloni, gonne)");
+  }
+  S.outfit = { lista: scelti, mancano, stagione: st, formalita: target }; S.parere = null;
+}
+
+function vistaOutfit() {
+  const o = S.outfit;
+  const stag = STAGIONI.map(s => `<button class="chip" data-ostag="${s}" aria-pressed="${S.outfitStagione === s}">${cap(s)}</button>`).join("");
+  const form = [[2, "Casual"], [3, "Smart casual"], [4, "Elegante"]].map(([k, l]) => `<button class="chip" data-oform="${k}" aria-pressed="${S.outfitFormalita === k}">${l}</button>`).join("");
+  let corpo = "";
+  if (!S.capi.length) corpo = `<div class="empty"><p class="muted">Aggiungi qualche capo all'armadio: servono almeno un capo sopra e uno sotto, oppure un abito.</p><button class="btn primary" data-act="aggiungi">Aggiungi un capo</button></div>`;
+  else if (o) {
+    if (!o.lista.length) corpo = `<div class="banner">Per ${o.stagione} non trovo combinazioni complete.${o.mancano.length ? " Mancano: " + o.mancano.join("; ") + "." : ""}</div>`;
+    else corpo = o.lista.map((x, i) => `<div class="outfit"><div class="row" style="justify-content:space-between"><h3>Abbinamento ${i + 1}</h3><span class="score">punteggio ${x.score.toFixed(1)}</span></div>
+      <div class="items">${x.items.map(it => `<div class="it"><div class="ph">${it.immagine ? `<img src="${esc(it.immagine)}" alt="">` : `<span class="glyph" style="font-size:22px">${esc((it.categoria || "?")[0].toUpperCase())}</span>`}</div><span>${esc(it.nome || it.categoria)}</span></div>`).join("")}</div>
+      <div class="why">${esc(cap(x.note.join(" · ")) || "Abbinamento equilibrato")}</div></div>`).join("") +
+      (S.sample ? `<div class="stack" style="margin-top:4px"><button class="btn" data-act="parere" ${S.parere?.attesa ? "disabled" : ""}>Chiedi a Claude quale scegliere</button>
+        ${S.parere ? `<div class="opinion">${S.parere.attesa && !S.parere.testo ? `<span class="row"><span class="spin"></span>Claude sta valutando…</span>` : esc(S.parere.testo || "")}</div>` : ""}</div>` : "");
+  }
+  return `<div class="top"><div><h1>Abbinamenti</h1><div class="count">regole su colore, fantasia, formalità e stagione</div></div></div>
+    <div class="stack"><div class="chips" role="group" aria-label="Stagione">${stag}</div><div class="chips" role="group" aria-label="Occasione">${form}</div>
+    ${S.capi.length ? `<button class="btn primary" data-act="genera">Proponi abbinamenti</button>` : ""}${corpo}</div>`;
+}
+
+async function chiediParere() {
+  const o = S.outfit; if (!o?.lista.length || !S.sample) return;
+  const desc = it => [it.nome || it.categoria, it.colore_primario, it.fantasia !== "tinta unita" ? it.fantasia : null, it.materiale].filter(Boolean).join(", ");
+  const prompt = `Sei uno stylist. Stagione: ${o.stagione}. Occasione: ${FORMALITA[o.formalita]}.
+Questi abbinamenti sono stati composti da un armadio reale:
+${o.lista.map((x, i) => `${i + 1}. ${x.items.map(desc).join(" + ")}`).join("\n")}
+
+In italiano, in massimo 5 righe e senza elenchi puntati: indica il numero dell'abbinamento migliore per l'occasione e perché, e un ritocco concreto per uno degli altri. Non proporre capi che non sono nell'elenco.`;
+  S.parere = { attesa: true, testo: "" }; render();
+  try {
+    await S.sample(prompt, { onText: ({ text }) => { S.parere.testo = text; render(); } });
+  } catch (e) { S.parere.testo = e && e.code === "not_granted" ? "Non hai autorizzato l'app a usare Claude." : (e && e.text) || "Parere non disponibile ora: riprova più tardi."; }
+  S.parere.attesa = false; render();
+}
+
+// ---------- Qualità AI (metriche della Fase 0) ----------
+const uguale = (a, b) => Array.isArray(a) || Array.isArray(b)
+  ? JSON.stringify([...(a || [])].sort()) === JSON.stringify([...(b || [])].sort())
+  : String(a ?? "").trim().toLowerCase() === String(b ?? "").trim().toLowerCase();
+function metriche() {
+  const agg = {};
+  S.capi.forEach(c => Object.entries(c.proposta || {}).forEach(([k, val]) => {
+    if (k.startsWith("nome|")) return; // il nome è testo libero: si modifica per gusto, non per errore
+    const campo = k.split("|")[0]; (agg[k] ||= { n: 0, ok: 0 }); agg[k].n++; if (uguale(val, c[campo])) agg[k].ok++;
+  }));
+  const tempi = {};
+  S.capi.filter(c => c.secondi_inserimento).forEach(c => {
+    const m = (c.modalita || []).includes("foto") && (c.modalita || []).includes("etichetta") ? "foto + etichetta" : (c.modalita || [])[0] || "manuale";
+    (tempi[m] ||= []).push(c.secondi_inserimento);
+  });
+  const conAI = S.capi.filter(c => Object.keys(c.proposta || {}).some(k => k.endsWith("|ai")));
+  const zero = conAI.filter(c => ["categoria", "colore_primario", "fantasia", "stagioni", "formalita"].every(campo => !(campo + "|ai" in (c.proposta || {})) || uguale(c.proposta[campo + "|ai"], c[campo]))).length;
+  return { agg, tempi, conAI: conAI.length, zero };
+}
+function vistaQualita() {
+  const { agg, tempi, conAI, zero } = metriche();
+  const nomiFonte = { ai: "Claude (foto)", etichetta: "Claude (etichetta)", pixel: "colore dai pixel" };
+  const righe = Object.keys(agg).sort().map(k => {
+    const [campo, fonte] = k.split("|"), { n, ok } = agg[k], acc = ok / n, soglia = SOGLIE[k];
+    let pill = `<span class="pill na">informativo</span>`;
+    if (soglia != null) pill = n < CAMPIONE_MIN ? `<span class="pill na">servono ${CAMPIONE_MIN - n} capi</span>` : acc >= soglia ? `<span class="pill ok">ok ≥ ${Math.round(soglia * 100)}%</span>` : `<span class="pill bad">sotto ${Math.round(soglia * 100)}%${BLOCCANTI.has(k) ? " · bloccante" : ""}</span>`;
+    return `<tr><td>${esc(campo.replace("_testo", "").replace("_", " "))}<div class="hint">${nomiFonte[fonte] || fonte}</div></td><td class="n">${Math.round(acc * 100)}%<div class="hint">${ok}/${n}</div></td><td>${pill}</td></tr>`;
+  }).join("");
+  const bloccantiOk = [...BLOCCANTI].every(k => agg[k] && agg[k].n >= CAMPIONE_MIN && agg[k].ok / agg[k].n >= SOGLIE[k]);
+  const bloccantiValutati = [...BLOCCANTI].every(k => agg[k] && agg[k].n >= CAMPIONE_MIN);
+  const esito = !bloccantiValutati ? `<span class="pill na">dati insufficienti</span>` : bloccantiOk ? `<span class="pill ok">GO</span>` : `<span class="pill bad">NO-GO</span>`;
+  const media = a => Math.round(a.reduce((s, x) => s + x, 0) / a.length);
+  return `<div class="top"><div><h1>Qualità AI</h1><div class="count">quanto spesso accetti la proposta senza correggerla</div></div></div>
+  <div class="stack">
+    <div class="kpis">
+      <div class="kpi"><span class="muted">Esito Fase 0</span><b>${esito}</b><span class="hint">campi bloccanti, almeno ${CAMPIONE_MIN} capi</span></div>
+      <div class="kpi"><span class="muted">Schede da foto senza correzioni</span><b>${conAI ? Math.round(zero / conAI * 100) + "%" : "—"}</b><span class="hint">${zero} su ${conAI} (categoria, colori, fantasia, stagioni, formalità)</span></div>
+      ${Object.entries(tempi).map(([m, a]) => `<div class="kpi"><span class="muted">Tempo medio · ${esc(m)}</span><b>${media(a)} s</b><span class="hint">${a.length} capi</span></div>`).join("")}
+    </div>
+    ${righe ? `<div class="tablewrap"><table class="q"><thead><tr><th>Campo</th><th class="n">Accettati</th><th>Soglia</th></tr></thead><tbody>${righe}</tbody></table></div>`
+      : `<div class="banner">Le metriche compaiono quando aggiungi capi con foto o etichetta. Ogni volta che correggi un valore proposto, qui conta come errore.</div>`}
+    <p class="hint">Un valore conta come corretto se lo salvi senza modificarlo: se non controlli la scheda prima di salvare, l'accuratezza risulta più alta del reale. Soglie: ipotesi di lavoro, da rivedere dopo i primi 25 capi.</p>
+  </div>`;
+}
+
+// ---------- Eventi globali ----------
+document.addEventListener("click", e => {
+  if (!document.body.contains(e.target)) return; // il foglio ha già ridisegnato il proprio contenuto
+  const nav = e.target.closest("#bar button[data-view]");
+  if (nav) { if (nav.dataset.view === "aggiungi") return sceltaAggiunta(); S.view = nav.dataset.view; render(); window.scrollTo(0, 0); return; }
+  if (e.target.closest("#modal")) { const c = e.target.closest('[data-act="chiudi"]'); if (c) chiudiFoglio(); return; }
+  const t = e.target.closest("button"); if (!t) return;
+  if (t.dataset.filtro) { S.filtro = t.dataset.filtro; render(); }
+  else if (t.dataset.stag) { S.stagione = t.dataset.stag; render(); }
+  else if (t.dataset.capo) { const c = S.capi.find(x => x.id === t.dataset.capo); if (c) apriEditor(bozzaDaCapo(c)); }
+  else if (t.dataset.ostag) { S.outfitStagione = t.dataset.ostag; S.outfit = null; render(); }
+  else if (t.dataset.oform) { S.outfitFormalita = Number(t.dataset.oform); S.outfit = null; render(); }
+  else if (t.dataset.act === "aggiungi") sceltaAggiunta();
+  else if (t.dataset.act === "genera") { generaOutfit(); render(); }
+  else if (t.dataset.act === "parere") chiediParere();
+});
+document.addEventListener("keydown", e => { if (e.key === "Escape" && $("#modal").innerHTML) chiudiFoglio(); });
+
+avvia();
+</script>
