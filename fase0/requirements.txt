@@ -1,0 +1,5 @@
+anthropic>=1.13
+pillow>=10
+numpy>=1.26
+# Opzionale, per lo scontorno di qualità (scarica un modello da GitHub al primo uso):
+# rembg[cpu]>=2.0

@@ -1,0 +1,10 @@
+# Foto e risultati personali: non vanno nel repository
+output/
+output_*/
+input_*/
+input/capi/*
+input/etichette/*
+input/manuale.csv
+!input/**/.gitkeep
+__pycache__/
+.venv/
