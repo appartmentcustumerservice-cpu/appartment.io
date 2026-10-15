@@ -10,6 +10,7 @@ L'app propone abbinamenti per colore, fantasia, formalità e stagione.
 |---|---|
 | `app/armadio-digitale.html` | La web app (prototipo Fase 0), pubblicata come Artifact su claude.ai |
 | `fase0/` | Kit Python per analizzare in blocco un campione di foto da computer (opzionale) |
+| `docs/BACKLOG.md` | Funzioni in coda di implementazione, con fattibilità e requisiti |
 
 ## Web app
 
